@@ -1,19 +1,8 @@
-package main
-import kotlin.random.Random
-import matrix.MMath
-import matrix.Matrix
-import kotlin.math.absoluteValue
+package matrix
 
-fun main() {
-    // Variant 12
-    // n = 10 m = 10 vectors = 7, 8, 5, 12
-    val yOriginals:List<Matrix> = listOf(
-        Matrix(listOf(listOf(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0))),
-        Matrix(listOf(listOf(1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0))),
-        Matrix(listOf(listOf(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))),
-        Matrix(listOf(listOf(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))))
+import main.printOriginalsVectors
 
-    val y = Matrix(yOriginals.flatMap { matrix -> matrix.toListOfLists() })
+fun hopLogic(yOriginals:List<Matrix>, y: Matrix) {
 
     val buffValW = (y * 2.0 - 1.0).transpose() * (y * 2.0 - 1.0)
     val w = buffValW - Matrix.identity(buffValW.getRowsNum())
@@ -37,7 +26,7 @@ fun main() {
                 val signS = MMath.sign(s[0, 0])
                 yAsyncList[curY][0, i] = signS
 
-                println("y_model(${i + 1}) = \t[${yAsyncList[curY]}]")
+                println("y_model(${i + 1}) = \t[${yAsyncList[curY].getFormattedRow(0, i)}]")
             }
 
             println("y_original = \t[${yOriginals[curY]}]")
@@ -83,30 +72,21 @@ fun main() {
 
     println("\n4. Maximum number of recognised noisy bits:")
     println("  Async:")
-        maxNumRecNoisyBit[0].forEachIndexed { index, matrix -> println("\ty_$index = ${matrix.countDifferences(yOriginals[index])}") }
+    maxNumRecNoisyBit[0].forEachIndexed { index, matrix -> println("\ty_$index = ${matrix.countDifferences(yOriginals[index])}") }
     println("  Sync:")
-        maxNumRecNoisyBit[1].forEachIndexed { index, matrix -> println("\ty_$index = ${matrix.countDifferences(yOriginals[index])}") }
-}
-
-
-
-fun printOriginalsVectors(yOriginals: List<Matrix>, name: String) {
-    println("${name}:\n")
-    println("1. Source vectors:")
-    yOriginals.forEachIndexed { index, value -> println("Y$index = [$value]") }
-    println()
+    maxNumRecNoisyBit[1].forEachIndexed { index, matrix -> println("\ty_$index = ${matrix.countDifferences(yOriginals[index])}") }
 }
 
 fun getBestNoiseBitsHopAsync(yOriginals: List<Matrix>, w: Matrix): List<Matrix> {
     var bestNoiseBits: List<Matrix> = yOriginals.map { it.copy() }
 
     for (mIndex in yOriginals.indices) {
-        val yNoiseListOriginal: List<Matrix> = generateRandomNoiseMatrices(yOriginals[mIndex], 1000)
+        val yNoiseListOriginal: List<Matrix> = Matrix.generateRandomNoise(yOriginals[mIndex], 1000)
         val yNoiseList: List<Matrix> = yNoiseListOriginal.map { it.copy() }
         for (curY in yNoiseList.indices) {
-            var bestCount: Int = 0
 
             // TODO SHIT YOU CAN OPTIMISE
+            var bestCount: Int = 0
             for (stage in 1..10) {
                 for (i in 0..< w.getColumnsNum()) {
                     val s = yNoiseList[curY] * w.getColumn(i)
@@ -136,12 +116,12 @@ fun getBestNoiseBitsHopSync(yOriginals: List<Matrix>, w: Matrix): List<Matrix> {
     var bestNoiseBits: List<Matrix> = yOriginals.map { it.copy() }
 
     for (mIndex in yOriginals.indices) {
-        val yNoiseListOriginal: List<Matrix> = generateRandomNoiseMatrices(yOriginals[mIndex], 1000)
+        val yNoiseListOriginal: List<Matrix> = Matrix.generateRandomNoise(yOriginals[mIndex], 1000)
         val yNoiseList: MutableList<Matrix> = yNoiseListOriginal.map { it.copy() }.toMutableList()
         for (curY in yNoiseList.indices) {
-            var bestCount: Int = 0
 
             // TODO SHIT YOU CAN OPTIMISE
+            var bestCount: Int = 0
             for (stage in 1..10) {
                 var breakBool: Boolean = false
                 for (i in 0..< w.getColumnsNum()) {
@@ -167,25 +147,4 @@ fun getBestNoiseBitsHopSync(yOriginals: List<Matrix>, w: Matrix): List<Matrix> {
     }
 
     return bestNoiseBits
-}
-
-fun generateRandomNoiseMatrices(matrix: Matrix, size: Int = 100): List<Matrix> {
-    val rows = matrix.getRowsNum()
-    val cols = matrix.getColumnsNum()
-
-    val result = mutableListOf<Matrix>()
-    val powerM: Int = matrix.getRowsNum() * matrix.getColumnsNum()
-
-    for (i in 0..< size) {
-        val noisyData: Matrix = matrix.copy()
-        val chanValNum = Random.nextInt().absoluteValue % powerM
-        for(j in 0 ..< chanValNum) {
-                noisyData[Random.nextInt().absoluteValue % rows, Random.nextInt().absoluteValue % cols] =
-                    if (Random.nextBoolean()) 1.0 else 0.0
-            }
-
-        result.add(noisyData)
-    }
-
-    return result
 }
